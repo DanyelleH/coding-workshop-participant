@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/styled-engine": "^7.3.9"
+  }
+}

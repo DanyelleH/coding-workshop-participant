@@ -1,0 +1,38 @@
+[
+  {
+    "_id": "ACH01",
+    "name": "Top Performing Team",
+    "description": "Exceeded quarterly performance goals.",
+    "teamId": "TEAM101",
+    "dateAwarded": "2024-03-01T00:00:00Z",
+    "points": 200,
+    "category": "Performance"
+  },
+  {
+    "_id": "ACH02",
+    "name": "Innovation Excellence",
+    "description": "Delivered cutting-edge fraud detection model.",
+    "teamId": "TEAM102",
+    "dateAwarded": "2024-04-01T00:00:00Z",
+    "points": 180,
+    "category": "Innovation"
+  },
+  {
+    "_id": "ACH03",
+    "name": "Customer Impact Award",
+    "description": "Improved client satisfaction metrics significantly.",
+    "teamId": "TEAM103",
+    "dateAwarded": "2024-05-01T00:00:00Z",
+    "points": 170,
+    "category": "Customer Success"
+  },
+  {
+    "_id": "ACH04",
+    "name": "Delivery Excellence",
+    "description": "Delivered all milestones ahead of schedule.",
+    "teamId": "TEAM101",
+    "dateAwarded": "2024-06-01T00:00:00Z",
+    "points": 150,
+    "category": "Execution"
+  }
+]

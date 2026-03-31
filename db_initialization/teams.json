@@ -1,0 +1,50 @@
+[
+  {
+    "_id": "TEAM101",
+    "name": "Alpha Team",
+    "leaderId": "IND0005",
+    "members": [
+      "IND0001",
+      "IND0002",
+      "IND0003",
+      "IND0004",
+      "IND0006"
+    ],
+    "organization": "Enterprise Technology",
+    "project": "Internal Dashboard",
+    "createdAt": "2024-01-01T00:00:00Z",
+    "status": "active"
+  },
+  {
+    "_id": "TEAM102",
+    "name": "Beta Team",
+    "leaderId": "IND0007",
+    "members": [
+      "IND0001",
+      "IND0003",
+      "IND0008",
+      "IND0009",
+      "IND0010"
+    ],
+    "organization": "Credit Cards",
+    "project": "Fraud Detection System",
+    "createdAt": "2024-02-01T00:00:00Z",
+    "status": "active"
+  },
+  {
+    "_id": "TEAM103",
+    "name": "Gamma Team",
+    "leaderId": "IND0011",
+    "members": [
+      "IND0003",
+      "IND0012",
+      "IND0013",
+      "IND0014",
+      "IND0015"
+    ],
+    "organization": "Private Banking",
+    "project": "Client Analytics Platform",
+    "createdAt": "2024-03-01T00:00:00Z",
+    "status": "active"
+  }
+]
