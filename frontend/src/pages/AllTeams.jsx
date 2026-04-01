@@ -3,7 +3,7 @@ import { Card, CardContent, Typography, Box, Grid } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import GroupIcon from "@mui/icons-material/Group";
 import StarIcon from "@mui/icons-material/Star";
-import getAllTeams from "../api/getAllTeams";
+import { getAllTeams } from "../api/teams";
 // Mock data
 // const teams = [
 //   { id: "TEAM101", name: "Alpha Team", leader: "Emma Wilson" },

@@ -1,64 +1,88 @@
 import json
-from http import HTTPstatus
-from urllib import response
 from ..database import get_db
 
 db = get_db()
+def response(status, body):
+    return {
+        "statusCode": status,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+        },
+        "body": json.dumps(body)
+    }
+def get_teams():
+    teams = list(db.teams.find())
+    for team in teams:
+        team["_id"] = str(team["_id"])
+    return response(200, teams)
+def get_team_by_id(team_id):
+    team = db.teams.find_one({"_id": team_id})
+    if not team:
+        return response(404, "Team not found")
+    team["_id"] = str(team["_id"])
+    return response(200, team)
+def create_team(event):
+    data = json.loads(event.get("body") or "{}")
+
+    # Business rule: max 6 members
+    if len(data.get("members", [])) > 6:
+        return response(400, "Team cannot exceed 6 members")
+    db.teams.insert_one(data)
+    return response(200, "Team created")
+
+def update_team(event, team_id):
+    data = json.loads(event.get("body") or "{}")
+
+    # Business rule: max 6 members
+    if len(data.get("members", [])) > 6:
+        return response(400, "Team cannot exceed 6 members")
+
+    result = db.teams.update_one(
+        {"_id": team_id},
+        {"$set": data}
+    )
+
+    if result.matched_count == 0:
+        return response(404, "Team not found")
+
+    return response(200, "Team updated")
+def delete_team(team_id):
+    result = db.teams.delete_one({"_id": team_id})
+    if result.deleted_count == 0:
+        return response(404, "Team not found")
+    return response(200, "Team deleted")
+
 
 def handler(event = None, context = None):
-    """
-    AWS Lambda Hello World.
-    """
-    method = event["httpMethod"]
-    path = event.get("pathParameters")
+    try:
+        method = event.get("httpMethod")
+        path = event.get("pathParameters") or {}
+        team_id = path.get("id")
 
-    if method == "GET":
-        def get_all():
-            teams = list(db.teams.find({}, {"_id": 0}))
-            return response(200, teams)
-        return get_all()
-    
-    elif method == "POST":
-        def create(event):
-            
-            data = json.loads(event["body"])
+        if method == "GET" and team_id:
+            return get_team_by_id(team_id)
 
-            # Business rule: max 6 members
-            if len(data["members"]) > 6:
-                return response(400, "Team cannot exceed 6 members")
+        elif method == "GET":
+            return get_teams()
+        
+        elif method == "POST":
+            return create_team(event)
 
-            db.teams.insert_one(data)
+        elif method == "PUT" and team_id:
+            return update_team(event, team_id)
 
-            return response(200, "Team created")
-        return create(event)
+        elif method == "DELETE" and team_id:
+            return delete_team(team_id)
 
-    elif method == "PUT":
-        def update(event, path):
-            team_id = path["id"]
-            data = json.loads(event["body"])
-
-            db.teams.update_one(
-                {"_id": team_id},
-                {"$set": data}
-            )
-
-            return response(200, "Updated")
-        return update(event, path)
-
-    elif method == "DELETE":
-        def delete(path):
-            team_id = path["id"]
-
-            db.teams.delete_one({"_id": team_id})
-
-            return response(200, "Deleted")
-        return delete(path)
-
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps({"message": "Hello, World!"}),
-    }
+        return {
+            "statusCode": 400,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"message": "Invalid request"}),
+        }
+    except Exception as e:
+        print("ERROR:", str(e))
+        return response(500, str(e))
 
 if __name__ == "__main__":
     print(handler())
