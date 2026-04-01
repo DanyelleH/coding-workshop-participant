@@ -16,15 +16,21 @@
     "@mui/material": "^7.3.9",
     "@mui/styled-engine": "^7.3.9",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.2",
+    "user-event": "^3.0.3",
+    "vitest": "^4.1.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^10.0.0",
     "globals": "^16.5.0",
+    "jsdom": "^29.0.1",
     "vite": "^7.2.4"
   }
 }

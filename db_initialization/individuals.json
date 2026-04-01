@@ -93,7 +93,7 @@
     "role": "Team Lead",
     "organization": "Credit Cards",
     "location": "Miami, USA",
-    "region": "NTAM",
+    "region": "LATAM",
     "yearsOfExperience": 8,
     "isLeader": true
   },
@@ -107,7 +107,7 @@
     "role": "Backend Developer",
     "organization": "Credit Cards",
     "location": "Mexico City, Mexico",
-    "region": "NTAM",
+    "region": "LATAM",
     "yearsOfExperience": 4,
     "isLeader": false
   },
@@ -163,7 +163,7 @@
     "role": "Data Analyst",
     "organization": "Private Banking",
     "location": "Bogotá, Colombia",
-    "region": "NTAM",
+    "region": "LATAM",
     "yearsOfExperience": 4,
     "isLeader": false
   },
