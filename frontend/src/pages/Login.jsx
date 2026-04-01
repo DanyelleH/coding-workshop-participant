@@ -31,7 +31,7 @@ export default function Login() {
       // **Logic to hit endpoint to create user**
       // store token in local storage and set auth context
       alert("Account created! Please complete your profile.");
-      navigate("/profile-update", { state: form });
+      navigate("/user-profile", { state: form });
     }
   };
 
