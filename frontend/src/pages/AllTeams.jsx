@@ -3,13 +3,13 @@ import { Card, CardContent, Typography, Box, Grid } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import GroupIcon from "@mui/icons-material/Group";
 import StarIcon from "@mui/icons-material/Star";
-
+import getAllTeams from "../api/getAllTeams";
 // Mock data
-const teams = [
-  { id: "TEAM101", name: "Alpha Team", leader: "Emma Wilson" },
-  { id: "TEAM102", name: "Beta Team", leader: "Liam Martinez" },
-  { id: "TEAM103", name: "Gamma Team", leader: "Ethan Wong" }
-];
+// const teams = [
+//   { id: "TEAM101", name: "Alpha Team", leader: "Emma Wilson" },
+//   { id: "TEAM102", name: "Beta Team", leader: "Liam Martinez" },
+//   { id: "TEAM103", name: "Gamma Team", leader: "Ethan Wong" }
+// ];
 
 export default function AllTeams() {
   const navigate = useNavigate();
@@ -30,6 +30,7 @@ export default function AllTeams() {
       backgroundColor: "#f5f5f5"
     }
   };
+  const teams = getAllTeams();
 
   return (
     <Box sx={{ p: 4 }}>
