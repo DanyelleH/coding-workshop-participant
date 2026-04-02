@@ -35,14 +35,30 @@ def get_team_by_id(team_id):
     return response(200, team)
 
 def create_team(event):
-    db = get_database()
-    data = json.loads(event.get("body") or "{}")
+    try:
+        body = event.get("body") or "{}"
+        data = json.loads(body)
 
-    # Business rule: max 6 members
-    if len(data.get("members", [])) > 6:
-        return response(400, "Team cannot exceed 6 members")
-    db.teams.insert_one(data)
-    return response(200, "Team created")
+        print("PARSED DATA:", data)
+
+        if not isinstance(data.get("_id"), str):
+            return response(400, "Invalid _id")
+
+        if not isinstance(data.get("name"), str):
+            return response(400, "Invalid name")
+
+        if len(data.get("members", [])) > 6:
+            return response(400, "Team cannot exceed 6 members")
+
+        db = get_database()
+        db.teams.insert_one(data)
+
+        return response(200, "Team created")
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return response(500, str(e))
+
 
 def update_team(event, team_id):
     db = get_database()
@@ -72,24 +88,30 @@ def delete_team(team_id):
 
 def handler(event=None, context=None):
     try:
-        method = event.get("httpMethod")
-        path = event.get("pathParameters") or {}
-        team_id = path.get("id")
+        print("EVENT:", event)
 
-        if method == "GET" and team_id:
-            result = get_team_by_id(team_id)
+        method = event.get("requestContext", {}).get("http", {}).get("method", "").strip().upper()
+        print("METHOD:", method)
 
-        elif method == "GET":
+        if method == "GET":
             result = get_teams()
 
         elif method == "POST":
             result = create_team(event)
 
-        elif method == "PUT" and team_id:
-            result = update_team(event, team_id)
+        elif method == "PUT":
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"message": "PUT not supported yet"})
+            }
 
-        elif method == "DELETE" and team_id:
-            result = delete_team(team_id)
+        elif method == "DELETE":
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"message": "DELETE not supported yet"})
+            }
 
         else:
             result = response(400, {"message": "Invalid request"})
@@ -108,10 +130,5 @@ def handler(event=None, context=None):
             "body": json.dumps({"error": str(e)})
         }
 
-# def handler(event=None, context=None):
-#     return {
-#         "statusCode": 200,
-#         "body": "Lambda is working"
-#     }
 if __name__ == "__main__":
     print(handler())

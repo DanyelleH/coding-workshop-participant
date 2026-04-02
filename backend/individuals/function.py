@@ -1,5 +1,7 @@
 import json
 from database import get_db
+
+# 🔥 Lazy DB initialization (important for Lambda performance)
 db = None
 
 def get_database():
@@ -8,6 +10,7 @@ def get_database():
         print("Connecting to DB...")
         db = get_db()
     return db
+
 # ---------------- RESPONSE ----------------
 def response(status, body):
     return {
@@ -19,92 +22,124 @@ def response(status, body):
         "body": json.dumps(body)
     }
 
-# ---------------- GET ----------------
+# ---------------- GET ALL ----------------
 def get_individuals():
     db = get_database()
 
     individuals = list(db.individuals.find())
     for ind in individuals:
         ind["_id"] = str(ind["_id"])
+
     return response(200, individuals)
-
-def get_individual_by_id(individual_id):
-    db = get_database()
-
-    individual = db.individuals.find_one({"_id": individual_id})
-
-    if not individual:
-        return response(404, "Individual not found")
-
-    individual["_id"] = str(individual["_id"])
-    return response(200, individual)
 
 # ---------------- CREATE ----------------
 def create_individual(event):
-    db = get_database()
-    data = json.loads(event.get("body") or "{}")
+    try:
+        db = get_database()
 
-    if not data.get("name") or not data.get("email"):
-        return response(400, "Missing required fields")
+        body = event.get("body") or "{}"
+        data = json.loads(body)
 
-    # Optional: prevent duplicates
-    if db.individuals.find_one({"_id": data.get("_id")}):
-        return response(400, "Individual already exists")
+        print("CREATE DATA:", data)
 
-    db.individuals.insert_one(data)
-    return response(200, "Individual created")
+        # 🔥 Validation
+        if not isinstance(data.get("_id"), str):
+            return response(400, "Invalid _id")
+
+        if not isinstance(data.get("name"), str):
+            return response(400, "Invalid name")
+
+        if not isinstance(data.get("email"), str):
+            return response(400, "Invalid email")
+
+        # Prevent duplicate
+        if db.individuals.find_one({"_id": data["_id"]}):
+            return response(400, "Individual already exists")
+
+        db.individuals.insert_one(data)
+
+        return response(200, "Individual created")
+
+    except Exception as e:
+        print("CREATE ERROR:", str(e))
+        return response(500, str(e))
 
 # ---------------- UPDATE ----------------
-def update_individual(event, individual_id):
-    db = get_database()
-    data = json.loads(event.get("body") or "{}")
+def update_individual(event):
+    try:
+        db = get_database()
 
-    result = db.individuals.update_one(
-        {"_id": individual_id},
-        {"$set": data}
-    )
+        body = event.get("body") or "{}"
+        data = json.loads(body)
 
-    if result.matched_count == 0:
-        return response(404, "Individual not found")
+        individual_id = data.get("_id")
 
-    return response(200, "Individual updated")
+        if not individual_id:
+            return response(400, "Missing _id")
+
+        result = db.individuals.update_one(
+            {"_id": individual_id},
+            {"$set": data}
+        )
+
+        if result.matched_count == 0:
+            return response(404, "Individual not found")
+
+        return response(200, "Individual updated")
+
+    except Exception as e:
+        print("UPDATE ERROR:", str(e))
+        return response(500, str(e))
 
 # ---------------- DELETE ----------------
-def delete_individual(individual_id):
-    db = get_database()
-    result = db.individuals.delete_one({"_id": individual_id})
+def delete_individual(event):
+    try:
+        db = get_database()
 
-    if result.deleted_count == 0:
-        return response(404, "Individual not found")
+        body = event.get("body") or "{}"
+        data = json.loads(body)
 
-    return response(200, "Individual deleted")
+        individual_id = data.get("_id")
+
+        if not individual_id:
+            return response(400, "Missing _id")
+
+        result = db.individuals.delete_one({"_id": individual_id})
+
+        if result.deleted_count == 0:
+            return response(404, "Individual not found")
+
+        return response(200, "Individual deleted")
+
+    except Exception as e:
+        print("DELETE ERROR:", str(e))
+        return response(500, str(e))
 
 # ---------------- HANDLER ----------------
 def handler(event=None, context=None):
+    print("EVENT:", event)
+
     try:
-        method = event.get("httpMethod")
-        path = event.get("pathParameters") or {}
-        individual_id = path.get("id")
+        # ✅ Correct method extraction for Lambda URL
+        method = event.get("requestContext", {}).get("http", {}).get("method", "").strip().upper()
 
-        if method == "GET" and individual_id:
-            result = get_individual_by_id(individual_id)
+        print("METHOD:", method)
 
-        elif method == "GET":
+        if method == "GET":
             result = get_individuals()
 
         elif method == "POST":
             result = create_individual(event)
 
-        elif method == "PUT" and individual_id:
-            result = update_individual(event, individual_id)
+        elif method == "PUT":
+            result = update_individual(event)
 
-        elif method == "DELETE" and individual_id:
-            result = delete_individual(individual_id)
+        elif method == "DELETE":
+            result = delete_individual(event)
 
         else:
             result = response(400, {"message": "Invalid request"})
 
-        # 🔥 ENSURE FORMAT MATCHES EXACTLY
         return {
             "statusCode": result["statusCode"],
             "headers": result["headers"],
@@ -112,17 +147,12 @@ def handler(event=None, context=None):
         }
 
     except Exception as e:
-        print("ERROR:", str(e))
+        print("HANDLER ERROR:", str(e))
         return {
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps({"error": str(e)})
         }
 
-# def handler(event=None, context=None):
-#     return {
-#         "statusCode": 200,
-#         "body": "Lambda is working"
-    # }
 if __name__ == "__main__":
     print(handler())
