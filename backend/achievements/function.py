@@ -16,8 +16,8 @@ def response(status, body):
     return {
         "statusCode": status,
         "headers": {
-            "Content-Type": "application/json"
-            
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
         },
         "body": json.dumps(body)
     }
@@ -32,17 +32,21 @@ def get_achievements():
 
     return response(200, data)
 
-# ---------------- GET BY TEAM (via body) ----------------
-def get_achievements_by_team(event):
+# ---------------- GET BY ID ----------------
+def get_achievement_by_id(achievement_id):
     db = get_database()
 
-    body = event.get("body") or "{}"
-    data = json.loads(body)
+    ach = db.achievements.find_one({"_id": achievement_id})
 
-    team_id = data.get("teamId")
+    if not ach:
+        return response(404, "Achievement not found")
 
-    if not team_id:
-        return response(400, "Missing teamId")
+    ach["_id"] = str(ach["_id"])
+    return response(200, ach)
+
+# ---------------- GET BY TEAM ----------------
+def get_achievements_by_team(team_id):
+    db = get_database()
 
     results = list(db.achievements.find({"teamId": team_id}))
 
@@ -61,7 +65,6 @@ def create_achievement(event):
 
         print("CREATE DATA:", data)
 
-        # 🔥 Validation
         required = ["_id", "name", "teamId"]
         for field in required:
             if not isinstance(data.get(field), str):
@@ -84,17 +87,12 @@ def create_achievement(event):
         return response(500, str(e))
 
 # ---------------- UPDATE ----------------
-def update_achievement(event):
+def update_achievement(event, achievement_id):
     try:
         db = get_database()
 
         body = event.get("body") or "{}"
         data = json.loads(body)
-
-        achievement_id = data.get("_id")
-
-        if not achievement_id:
-            return response(400, "Missing _id")
 
         result = db.achievements.update_one(
             {"_id": achievement_id},
@@ -111,17 +109,9 @@ def update_achievement(event):
         return response(500, str(e))
 
 # ---------------- DELETE ----------------
-def delete_achievement(event):
+def delete_achievement(achievement_id):
     try:
         db = get_database()
-
-        body = event.get("body") or "{}"
-        data = json.loads(body)
-
-        achievement_id = data.get("_id")
-
-        if not achievement_id:
-            return response(400, "Missing _id")
 
         result = db.achievements.delete_one({"_id": achievement_id})
 
@@ -140,20 +130,46 @@ def handler(event=None, context=None):
 
     try:
         method = event.get("requestContext", {}).get("http", {}).get("method", "").strip().upper()
-
         print("METHOD:", method)
 
-        if method == "GET":
+        raw_path = event.get("rawPath", "")
+        print("PATH:", raw_path)
+
+        parts = raw_path.strip("/").split("/")
+
+        # /api/achievements
+        # /api/achievements/{id}
+        # /api/achievements/team/{teamId}
+
+        achievement_id = None
+        team_id = None
+
+        if len(parts) >= 3:
+            if parts[2] == "team" and len(parts) >= 4:
+                team_id = parts[3]
+            else:
+                achievement_id = parts[2]
+
+        print("ACHIEVEMENT_ID:", achievement_id)
+        print("TEAM_ID:", team_id)
+
+        if method == "GET" and team_id:
+            result = get_achievements_by_team(team_id)
+
+        elif method == "GET" and achievement_id:
+            result = get_achievement_by_id(achievement_id)
+
+        elif method == "GET":
             result = get_achievements()
 
         elif method == "POST":
             result = create_achievement(event)
 
-        elif method == "PUT":
-            result = update_achievement(event)
+        elif method == "PUT" and achievement_id:
+            result = update_achievement(event, achievement_id)
 
-        elif method == "DELETE":
-            result = delete_achievement(event)
+        elif method == "DELETE" and achievement_id:
+            result = delete_achievement(achievement_id)
 
         else:
             result = response(400, {"message": "Invalid request"})

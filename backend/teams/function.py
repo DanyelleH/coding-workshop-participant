@@ -92,26 +92,26 @@ def handler(event=None, context=None):
 
         method = event.get("requestContext", {}).get("http", {}).get("method", "").strip().upper()
         print("METHOD:", method)
+        raw_path = event.get("rawPath", "")
+        parts = raw_path.strip("/").split("/")
 
-        if method == "GET":
+        team_id = None
+        if len(parts) >= 3:
+            team_id = parts[2]
+
+        if method == "GET" and team_id:
+            result = get_team_by_id(team_id)
+        elif method == "GET":
             result = get_teams()
 
         elif method == "POST":
             result = create_team(event)
 
-        elif method == "PUT":
-            return {
-                "statusCode": 400,
-                "headers": {"Content-Type": "application/json"},
-                "body": json.dumps({"message": "PUT not supported yet"})
-            }
+        elif method == "PUT" and team_id:
+            result = update_team(event, team_id)
 
-        elif method == "DELETE":
-            return {
-                "statusCode": 400,
-                "headers": {"Content-Type": "application/json"},
-                "body": json.dumps({"message": "DELETE not supported yet"})
-            }
+        elif method == "DELETE" and team_id:
+            result = delete_team(team_id)
 
         else:
             result = response(400, {"message": "Invalid request"})

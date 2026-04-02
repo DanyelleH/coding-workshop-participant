@@ -31,6 +31,17 @@ def get_individuals():
 
     return response(200, individuals)
 
+def get_individual_by_id(individual_id):
+    db = get_database()
+
+    individual = db.individuals.find_one({"_id": individual_id})
+
+    if not individual:
+        return response(404, "Individual not found")
+
+    individual["_id"] = str(individual["_id"])
+    return response(200, individual)
+
 # ---------------- CREATE ----------------
 def create_individual(event):
     try:
@@ -64,17 +75,12 @@ def create_individual(event):
         return response(500, str(e))
 
 # ---------------- UPDATE ----------------
-def update_individual(event):
+def update_individual(event, individual_id):
     try:
         db = get_database()
 
         body = event.get("body") or "{}"
         data = json.loads(body)
-
-        individual_id = data.get("_id")
-
-        if not individual_id:
-            return response(400, "Missing _id")
 
         result = db.individuals.update_one(
             {"_id": individual_id},
@@ -91,17 +97,9 @@ def update_individual(event):
         return response(500, str(e))
 
 # ---------------- DELETE ----------------
-def delete_individual(event):
+def delete_individual(individual_id):
     try:
         db = get_database()
-
-        body = event.get("body") or "{}"
-        data = json.loads(body)
-
-        individual_id = data.get("_id")
-
-        if not individual_id:
-            return response(400, "Missing _id")
 
         result = db.individuals.delete_one({"_id": individual_id})
 
@@ -119,22 +117,34 @@ def handler(event=None, context=None):
     print("EVENT:", event)
 
     try:
-        # ✅ Correct method extraction for Lambda URL
         method = event.get("requestContext", {}).get("http", {}).get("method", "").strip().upper()
-
         print("METHOD:", method)
 
-        if method == "GET":
+        raw_path = event.get("rawPath", "")
+        print("PATH:", raw_path)
+
+        parts = raw_path.strip("/").split("/")
+
+        individual_id = None
+        if len(parts) >= 3:
+            individual_id = parts[2]
+
+        print("INDIVIDUAL_ID:", individual_id)
+
+        if method == "GET" and individual_id:
+            result = get_individual_by_id(individual_id)
+
+        elif method == "GET":
             result = get_individuals()
 
         elif method == "POST":
             result = create_individual(event)
 
-        elif method == "PUT":
-            result = update_individual(event)
+        elif method == "PUT" and individual_id:
+            result = update_individual(event, individual_id)
 
-        elif method == "DELETE":
-            result = delete_individual(event)
+        elif method == "DELETE" and individual_id:
+            result = delete_individual(individual_id)
 
         else:
             result = response(400, {"message": "Invalid request"})
@@ -151,6 +161,7 @@ def handler(event=None, context=None):
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps({"error": str(e)})
+        
         }
 
 if __name__ == "__main__":
