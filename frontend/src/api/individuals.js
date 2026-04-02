@@ -23,3 +23,4 @@ export const deleteIndividual = (id) =>
   request(`${ENDPOINT}/${id}`, {
     method: "DELETE"
   });
+  

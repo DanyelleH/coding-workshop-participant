@@ -1,40 +1,143 @@
-import React, { useState } from "react";
-import { Card, CardContent, TextField, Button, Typography, Box, Tabs, Tab } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Tabs,
+  Tab
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { login, signup } from "../api/auth";
+
 export default function Login() {
   const [tab, setTab] = useState(0);
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [user, setUser] = useState(null);
+
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    email: "",
+    name: ""
+  });
+
   const navigate = useNavigate();
+
+  // 🔥 Check if user already logged in
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      setUser(JSON.parse(stored));
+    }
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = () => {
-    if (form.username.length < 4) {
-      alert("Username must be at least 4 characters");
-      return;
-    }
-    if (form.password.length < 6) {
-      alert("Password must be at least 6 characters");
-      return;
-    }
+  const generateId = () =>
+    "IND" + Math.floor(1000 + Math.random() * 9000);
 
-    if (tab === 0) {
-      // Login flow
-      // **Logic to hit endpoint to authenticate user**
-      // store token in local storage and set auth context
-      alert("Login successful");
-      // navigte to view all teams
-      navigate("/teams", { state: form });
-    } else {
-      // Signup flow
-      // **Logic to hit endpoint to create user**
-      // store token in local storage and set auth context
-      alert("Account created! Please complete your profile.");
-      navigate("/user-profile", { state: form });
+  const handleSubmit = async () => {
+    try {
+      if (form.username.length < 4) {
+        alert("Username must be at least 4 characters");
+        return;
+      }
+
+      if (form.password.length < 6) {
+        alert("Password must be at least 6 characters");
+        return;
+      }
+
+      if (tab === 0) {
+        const res = await login({
+          username: form.username,
+          password: form.password
+        });
+
+        localStorage.setItem("user", JSON.stringify(res.user));
+        setUser(res.user);
+
+        navigate("/teams");
+      } else {
+        if (!form.email || !form.name) {
+          alert("Name and email are required");
+          return;
+        }
+
+        await signup({
+          _id: generateId(),
+          name: form.name,
+          username: form.username,
+          email: form.email,
+          password: form.password
+        });
+
+        alert("Account created! You can now log in.");
+        setTab(0);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+  };
+
+  // 🔥 IF LOGGED IN → SHOW WELCOME
+  if (user) {
+    return (
+      <Box
+        sx={{
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "linear-gradient(135deg, #e3f2fd, #fce4ec)"
+        }}
+      >
+        <Card sx={{ width: 400, borderRadius: 4, boxShadow: 6 }}>
+          <CardContent sx={{ textAlign: "center" }}>
+            
+            <Typography variant="h5" gutterBottom>
+              Welcome back, {user.name} 👋
+            </Typography>
+
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              You’re already logged in
+            </Typography>
+
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ mb: 2 }}
+              onClick={() => navigate("/teams")}
+            >
+              Go to Dashboard
+            </Button>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              color="error"
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
+  // 🔥 NORMAL LOGIN UI
   return (
     <Box
       sx={{
@@ -61,6 +164,28 @@ export default function Login() {
             <Tab label="Sign Up" />
           </Tabs>
 
+          {tab === 1 && (
+            <>
+              <TextField
+                fullWidth
+                label="Full Name"
+                name="name"
+                margin="normal"
+                value={form.name}
+                onChange={handleChange}
+              />
+
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                margin="normal"
+                value={form.email}
+                onChange={handleChange}
+              />
+            </>
+          )}
+
           <TextField
             fullWidth
             label="Username"
@@ -80,16 +205,10 @@ export default function Login() {
             onChange={handleChange}
           />
 
-          <Typography variant="body2" sx={{ mt: 1, color: "gray" }}>
-            Requirements:
-            <br />• Username: at least 4 characters
-            <br />• Password: at least 6 characters
-          </Typography>
-
           <Button
             fullWidth
             variant="contained"
-            sx={{ mt: 3, borderRadius: 2 }}
+            sx={{ mt: 3 }}
             onClick={handleSubmit}
           >
             {tab === 0 ? "Login" : "Create Account"}

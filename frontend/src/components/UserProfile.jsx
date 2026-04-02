@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -9,19 +9,40 @@ import {
   Avatar,
 } from "@mui/material";
 import ProfileUpdate from "./ProfileUpdate";
+import { updateIndividual } from "../api/individuals";
 
 export default function Profile() {
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
-  const [user, setUser] = useState({
-    name: "Alice Johnson",
-    username: "alicej",
-    email: "alice@example.com",
-    organization: "Enterprise Technology",
-    role: "Frontend Developer",
-    location: "New York",
-    region: "NA"
-  });
+  // 🔥 Load user from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      setUser(JSON.parse(stored));
+    }
+  }, []);
+
+  if (!user) {
+    return <Typography>Loading...</Typography>;
+  }
+
+  const handleSave = async (updated) => {
+    try {
+      // 🔥 Update backend
+      await updateIndividual(updated._id, updated);
+
+      // 🔥 Update local state
+      setUser(updated);
+
+      // 🔥 Update localStorage
+      localStorage.setItem("user", JSON.stringify(updated));
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update profile");
+    }
+  };
 
   return (
     <Box
@@ -44,7 +65,6 @@ export default function Profile() {
         }}
       >
         <CardContent>
-          {/* Avatar */}
           <Avatar
             sx={{
               width: 70,
@@ -55,29 +75,27 @@ export default function Profile() {
               fontSize: 28
             }}
           >
-            {user.name[0]}
+            {user.name?.[0]}
           </Avatar>
 
-          {/* Name + Username */}
           <Typography variant="h5" fontWeight={600}>
             {user.name}
           </Typography>
+
           <Typography color="text.secondary" sx={{ mb: 2 }}>
             @{user.username}
           </Typography>
 
           <Divider sx={{ mb: 2 }} />
 
-          {/* Info */}
           <Box sx={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 1 }}>
             <Typography><strong>Email:</strong> {user.email}</Typography>
-            <Typography><strong>Organization:</strong> {user.organization}</Typography>
-            <Typography><strong>Role:</strong> {user.role}</Typography>
-            <Typography><strong>Location:</strong> {user.location}</Typography>
-            <Typography><strong>Region:</strong> {user.region}</Typography>
+            <Typography><strong>Organization:</strong> {user.organization || "-"}</Typography>
+            <Typography><strong>Role:</strong> {user.role || "-"}</Typography>
+            <Typography><strong>Location:</strong> {user.location || "-"}</Typography>
+            <Typography><strong>Region:</strong> {user.region || "-"}</Typography>
           </Box>
 
-          {/* Button */}
           <Button
             fullWidth
             variant="contained"
@@ -89,12 +107,11 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      {/* Dialog */}
       <ProfileUpdate
         open={open}
         onClose={() => setOpen(false)}
         user={user}
-        onSave={(updated) => setUser(updated)}
+        onSave={handleSave}
       />
     </Box>
   );

@@ -15,15 +15,30 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-export default function NavigationBar({ userRole = "user", onLogout, onNavigate }) {
+export default function NavigationBar({ userRole = "user" }) {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const navigate = useNavigate();
+
   const isMenuOpen = Boolean(menuAnchor);
 
-  // 🔥 Single source of truth
+  // 🔥 Get user from storage
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  // 🔥 Logout logic (GLOBAL + CLEAN)
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("isAuthenticated"); // optional
+
+    setMenuAnchor(null);
+    setMobileOpen(false);
+
+    navigate("/"); // or "/login"
+  };
+
   const navItems = [
     { label: "View Teams", path: "/teams" },
     { label: "Achievements", path: "/achievements" },
@@ -32,10 +47,9 @@ export default function NavigationBar({ userRole = "user", onLogout, onNavigate 
       : []),
   ];
 
-  const navigate = useNavigate();
-
   const handleNavigate = (path) => {
     setMobileOpen(false);
+    setMenuAnchor(null);
     navigate(path);
   };
 
@@ -77,7 +91,7 @@ export default function NavigationBar({ userRole = "user", onLogout, onNavigate 
               onClick={(e) => setMenuAnchor(e.currentTarget)}
               sx={{ display: { xs: "none", md: "block" }, color: "#e0e0e0" }}
             >
-              Profile
+              {user?.name || "Profile"}
             </Button>
 
             <Menu
@@ -88,10 +102,15 @@ export default function NavigationBar({ userRole = "user", onLogout, onNavigate 
               <MenuItem onClick={() => handleNavigate("/user-profile")}>
                 My Profile
               </MenuItem>
+
               <MenuItem onClick={() => handleNavigate("/settings")}>
                 Settings
               </MenuItem>
-              <MenuItem onClick={onLogout} sx={{ color: "red" }}>
+
+              <MenuItem
+                onClick={handleLogout}
+                sx={{ color: "red" }}
+              >
                 Logout
               </MenuItem>
             </Menu>
@@ -123,19 +142,20 @@ export default function NavigationBar({ userRole = "user", onLogout, onNavigate 
               </ListItem>
             ))}
 
-            {/* Profile options in mobile */}
             <ListItem disablePadding>
               <ListItemButton onClick={() => handleNavigate("/user-profile")}>
                 <ListItemText primary="My Profile" />
               </ListItemButton>
             </ListItem>
+
             <ListItem disablePadding>
               <ListItemButton onClick={() => handleNavigate("/settings")}>
                 <ListItemText primary="Settings" />
               </ListItemButton>
             </ListItem>
+
             <ListItem disablePadding>
-              <ListItemButton onClick={onLogout}>
+              <ListItemButton onClick={handleLogout}>
                 <ListItemText primary="Logout" />
               </ListItemButton>
             </ListItem>

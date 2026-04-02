@@ -24,15 +24,18 @@ export default function ProfileUpdate({ open, onClose, user, onSave }) {
   };
 
   const handleSubmit = () => {
-    if (!form.name || !form.email || !form.organization) {
-      alert("Please fill in all required fields");
-      return;
-    }
+  if (!form.name || !form.email || !form.organization) {
+    alert("Please fill in all required fields");
+    return;
+  }
 
-    onSave(form);   // update parent state
-    onClose();      // close dialog
-  };
+  onSave({
+    ...form,
+    _id: user._id 
+  });
 
+  onClose();
+};
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       
