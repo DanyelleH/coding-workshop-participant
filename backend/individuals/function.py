@@ -1,7 +1,7 @@
 import json
 from database import get_db
+import hashlib
 
-# 🔥 Lazy DB initialization (important for Lambda performance)
 db = None
 
 def get_database():
@@ -21,11 +21,30 @@ def response(status, body):
         "body": json.dumps(body)
     }
 
-# ---------------- GET ALL ----------------
+# ---------------- HELPERS ----------------
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def extract_id(parts):
+    """
+    Safely extract ID from path.
+    Avoid treating 'login' or 'register' as IDs.
+    """
+    if len(parts) < 2:
+        return None
+
+    last = parts[-1]
+
+    if last in ["login", "register", "individuals", "api"]:
+        return None
+
+    return last
+
+# ---------------- GET ----------------
 def get_individuals():
     db = get_database()
-
     individuals = list(db.individuals.find())
+
     for ind in individuals:
         ind["_id"] = str(ind["_id"])
 
@@ -35,7 +54,6 @@ def get_individual_by_id(individual_id):
     db = get_database()
 
     individual = db.individuals.find_one({"_id": individual_id})
-
     if not individual:
         return response(404, "Individual not found")
 
@@ -46,13 +64,8 @@ def get_individual_by_id(individual_id):
 def create_individual(event):
     try:
         db = get_database()
+        data = json.loads(event.get("body") or "{}")
 
-        body = event.get("body") or "{}"
-        data = json.loads(body)
-
-        print("CREATE DATA:", data)
-
-        # 🔥 Validation
         if not isinstance(data.get("_id"), str):
             return response(400, "Invalid _id")
 
@@ -62,12 +75,10 @@ def create_individual(event):
         if not isinstance(data.get("email"), str):
             return response(400, "Invalid email")
 
-        # Prevent duplicate
         if db.individuals.find_one({"_id": data["_id"]}):
             return response(400, "Individual already exists")
 
         db.individuals.insert_one(data)
-
         return response(200, "Individual created")
 
     except Exception as e:
@@ -78,9 +89,7 @@ def create_individual(event):
 def update_individual(event, individual_id):
     try:
         db = get_database()
-
-        body = event.get("body") or "{}"
-        data = json.loads(body)
+        data = json.loads(event.get("body") or "{}")
 
         result = db.individuals.update_one(
             {"_id": individual_id},
@@ -112,57 +121,112 @@ def delete_individual(individual_id):
         print("DELETE ERROR:", str(e))
         return response(500, str(e))
 
+# ---------------- AUTH ----------------
+def register_user(event):
+    try:
+        db = get_database()
+        data = json.loads(event.get("body") or "{}")
+
+        required = ["_id", "name", "email", "username", "password"]
+        for field in required:
+            if not isinstance(data.get(field), str):
+                return response(400, f"Invalid or missing field: {field}")
+
+        if db.individuals.find_one({"username": data["username"]}):
+            return response(400, "User already exists")
+
+        data["password"] = hash_password(data["password"])
+        data["isLeader"] = False
+        data["teamIds"] = []
+
+        db.individuals.insert_one(data)
+
+        return response(200, "User registered successfully")
+
+    except Exception as e:
+        print("REGISTER ERROR:", str(e))
+        return response(500, str(e))
+
+def login_user(event):
+    try:
+        db = get_database()
+        data = json.loads(event.get("body") or "{}")
+
+        username = data.get("username")
+        password = data.get("password")
+
+        if not username or not password:
+            return response(400, "Missing username or password")
+
+        user = db.individuals.find_one({"username": username})
+
+        if not user:
+            return response(401, "Invalid credentials")
+
+        hashed_input = hash_password(password)
+
+        # 🔥 Support both hashed + legacy plain passwords
+        if user.get("password") != hashed_input and user.get("password") != password:
+            return response(401, "Invalid credentials")
+
+        user["_id"] = str(user["_id"])
+        user.pop("password", None)
+
+        return response(200, {
+            "message": "Login successful",
+            "user": user
+        })
+
+    except Exception as e:
+        print("LOGIN ERROR:", str(e))
+        return response(500, str(e))
+
 # ---------------- HANDLER ----------------
 def handler(event=None, context=None):
     print("EVENT:", event)
 
     try:
         method = event.get("requestContext", {}).get("http", {}).get("method", "").strip().upper()
-        print("METHOD:", method)
-
         raw_path = event.get("rawPath", "")
+
+        print("METHOD:", method)
         print("PATH:", raw_path)
 
         parts = raw_path.strip("/").split("/")
+        last_part = parts[-1] if parts else ""
 
-        individual_id = None
-        if len(parts) >= 3:
-            individual_id = parts[2]
+        # 🔥 AUTH ROUTES FIRST
+        if method == "POST" and "register" in raw_path:
+            return register_user(event)
 
+        if method == "POST" and "login" in raw_path:
+            return login_user(event)
+
+        # 🔥 SAFE ID EXTRACTION
+        individual_id = extract_id(parts)
         print("INDIVIDUAL_ID:", individual_id)
 
         if method == "GET" and individual_id:
-            result = get_individual_by_id(individual_id)
+            return get_individual_by_id(individual_id)
 
         elif method == "GET":
-            result = get_individuals()
+            return get_individuals()
 
         elif method == "POST":
-            result = create_individual(event)
+            return create_individual(event)
 
         elif method == "PUT" and individual_id:
-            result = update_individual(event, individual_id)
+            return update_individual(event, individual_id)
 
         elif method == "DELETE" and individual_id:
-            result = delete_individual(individual_id)
+            return delete_individual(individual_id)
 
         else:
-            result = response(400, {"message": "Invalid request"})
-
-        return {
-            "statusCode": result["statusCode"],
-            "headers": result["headers"],
-            "body": result["body"]
-        }
+            return response(400, {"message": "Invalid request"})
 
     except Exception as e:
         print("HANDLER ERROR:", str(e))
-        return {
-            "statusCode": 500,
-            "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"error": str(e)})
-        
-        }
+        return response(500, {"error": str(e)})
 
 if __name__ == "__main__":
     print(handler())
