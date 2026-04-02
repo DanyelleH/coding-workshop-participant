@@ -20,7 +20,8 @@ def get_db():
             username=user,
             password=password,
             tls=True,
-            tlsAllowInvalidCertificates=True
+            tlsAllowInvalidCertificates=True,
+            retryWrites=False
         )
 
     return client[db_name]
