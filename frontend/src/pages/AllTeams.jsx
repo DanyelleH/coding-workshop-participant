@@ -1,4 +1,5 @@
 import React from "react";
+import { useState } from "react";
 import { Card, CardContent, Typography, Box, Grid } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import GroupIcon from "@mui/icons-material/Group";
@@ -12,6 +13,7 @@ import { getAllTeams } from "../api/teams";
 // ];
 
 export default function AllTeams() {
+  const [teams, setTeams] = useState([]);
   const navigate = useNavigate();
 
   const cardStyle = {
@@ -30,7 +32,14 @@ export default function AllTeams() {
       backgroundColor: "#f5f5f5"
     }
   };
-  const teams = getAllTeams();
+
+  React.useEffect(() => {
+    const fetchTeams = async () => {
+      const data = await getAllTeams();
+      setTeams(data);
+    };
+    fetchTeams();
+  }, []);
 
   return (
     <Box sx={{ p: 4 }}>

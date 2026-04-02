@@ -1,7 +1,14 @@
 import json
-from ..database import get_db
+from database import get_db
+db = None
 
-db = get_db()
+def get_database():
+    global db
+    if db is None:
+        print("Connecting to DB...") 
+        db = get_db()
+    return db
+
 def response(status, body):
     return {
         "statusCode": status,
@@ -12,17 +19,23 @@ def response(status, body):
         "body": json.dumps(body)
     }
 def get_teams():
+    db = get_database()
+
     teams = list(db.teams.find())
     for team in teams:
         team["_id"] = str(team["_id"])
     return response(200, teams)
+
 def get_team_by_id(team_id):
+    db = get_database()
     team = db.teams.find_one({"_id": team_id})
     if not team:
         return response(404, "Team not found")
     team["_id"] = str(team["_id"])
     return response(200, team)
+
 def create_team(event):
+    db = get_database()
     data = json.loads(event.get("body") or "{}")
 
     # Business rule: max 6 members
@@ -32,6 +45,7 @@ def create_team(event):
     return response(200, "Team created")
 
 def update_team(event, team_id):
+    db = get_database()
     data = json.loads(event.get("body") or "{}")
 
     # Business rule: max 6 members
@@ -47,42 +61,57 @@ def update_team(event, team_id):
         return response(404, "Team not found")
 
     return response(200, "Team updated")
+
 def delete_team(team_id):
+    db = get_database()
     result = db.teams.delete_one({"_id": team_id})
     if result.deleted_count == 0:
         return response(404, "Team not found")
     return response(200, "Team deleted")
 
 
-def handler(event = None, context = None):
+def handler(event=None, context=None):
     try:
         method = event.get("httpMethod")
         path = event.get("pathParameters") or {}
         team_id = path.get("id")
 
         if method == "GET" and team_id:
-            return get_team_by_id(team_id)
+            result = get_team_by_id(team_id)
 
         elif method == "GET":
-            return get_teams()
-        
+            result = get_teams()
+
         elif method == "POST":
-            return create_team(event)
+            result = create_team(event)
 
         elif method == "PUT" and team_id:
-            return update_team(event, team_id)
+            result = update_team(event, team_id)
 
         elif method == "DELETE" and team_id:
-            return delete_team(team_id)
+            result = delete_team(team_id)
+
+        else:
+            result = response(400, {"message": "Invalid request"})
 
         return {
-            "statusCode": 400,
-            "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"message": "Invalid request"}),
+            "statusCode": result["statusCode"],
+            "headers": result["headers"],
+            "body": result["body"]
         }
+
     except Exception as e:
         print("ERROR:", str(e))
-        return response(500, str(e))
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": str(e)})
+        }
 
+# def handler(event=None, context=None):
+#     return {
+#         "statusCode": 200,
+#         "body": "Lambda is working"
+#     }
 if __name__ == "__main__":
     print(handler())

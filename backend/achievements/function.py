@@ -1,7 +1,13 @@
 import json
-from ..database import get_db
+from database import get_db
+db = None
 
-db = get_db()
+def get_database():
+    global db
+    if db is None:
+        print("Connecting to DB...")
+        db = get_db()
+    return db
 
 # ---------------- RESPONSE ----------------
 def response(status, body):
@@ -16,12 +22,16 @@ def response(status, body):
 
 # ---------------- GET ----------------
 def get_achievements():
+    db = get_database()
+
     data = list(db.achievements.find())
     for ach in data:
         ach["_id"] = str(ach["_id"])
     return response(200, data)
 
 def get_achievement_by_id(achievement_id):
+    db = get_database()
+
     ach = db.achievements.find_one({"_id": achievement_id})
 
     if not ach:
@@ -31,6 +41,7 @@ def get_achievement_by_id(achievement_id):
     return response(200, ach)
 
 def get_achievements_by_team(team_id):
+    db = get_database()
     data = list(db.achievements.find({"teamId": team_id}))
     for ach in data:
         ach["_id"] = str(ach["_id"])
@@ -38,6 +49,7 @@ def get_achievements_by_team(team_id):
 
 # ---------------- CREATE ----------------
 def create_achievement(event):
+    db = get_database()
     data = json.loads(event.get("body") or "{}")
 
     required = ["_id", "name", "teamId"]
@@ -59,6 +71,7 @@ def create_achievement(event):
 
 # ---------------- UPDATE ----------------
 def update_achievement(event, achievement_id):
+    db = get_database()
     data = json.loads(event.get("body") or "{}")
 
     result = db.achievements.update_one(
@@ -73,6 +86,8 @@ def update_achievement(event, achievement_id):
 
 # ---------------- DELETE ----------------
 def delete_achievement(achievement_id):
+    db = get_database()
+
     result = db.achievements.delete_one({"_id": achievement_id})
 
     if result.deleted_count == 0:
@@ -80,45 +95,54 @@ def delete_achievement(achievement_id):
 
     return response(200, "Achievement deleted")
 
-# ---------------- HANDLER ----------------
 def handler(event=None, context=None):
     try:
         method = event.get("httpMethod")
         path = event.get("pathParameters") or {}
 
         achievement_id = path.get("id")
-        team_id = path.get("teamId")  # 👈 for /team/{teamId}
+        team_id = path.get("teamId")
 
-        # GET by team
         if method == "GET" and team_id:
-            return get_achievements_by_team(team_id)
+            result = get_achievements_by_team(team_id)
 
-        # GET by id
         elif method == "GET" and achievement_id:
-            return get_achievement_by_id(achievement_id)
+            result = get_achievement_by_id(achievement_id)
 
-        # GET all
         elif method == "GET":
-            return get_achievements()
+            result = get_achievements()
 
         elif method == "POST":
-            return create_achievement(event)
+            result = create_achievement(event)
 
         elif method == "PUT" and achievement_id:
-            return update_achievement(event, achievement_id)
+            result = update_achievement(event, achievement_id)
 
         elif method == "DELETE" and achievement_id:
-            return delete_achievement(achievement_id)
+            result = delete_achievement(achievement_id)
 
-        return response(400, {
-            "error": "Invalid request",
-            "method": method,
-            "id": achievement_id,
-            "teamId": team_id
-        })
+        else:
+            result = response(400, {"message": "Invalid request"})
+
+        return {
+            "statusCode": result["statusCode"],
+            "headers": result["headers"],
+            "body": result["body"]
+        }
 
     except Exception as e:
         print("ERROR:", str(e))
-        return response(500, str(e))
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": str(e)})
+        }
+# def handler(event=None, context=None):
+#     return {
+#         "statusCode": 200,
+#         "body": "Lambda is working"
+#     }
+
+
 if __name__ == "__main__":
     print(handler())

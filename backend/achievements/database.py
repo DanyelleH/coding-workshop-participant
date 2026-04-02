@@ -2,7 +2,7 @@ import os
 from pymongo import MongoClient
 
 def get_db():
-    is_local = os.getenv("IS_LOCAL")
+    is_local = os.getenv("IS_LOCAL") == "true"
 
     host = os.getenv("MONGO_HOST")
     port = int(os.getenv("MONGO_PORT"))
@@ -17,7 +17,8 @@ def get_db():
             port=port,
             username=user,
             password=password,
-            tls=True
+            tls=True,
+            tlsAllowInvalidCertificates=True
         )
 
     return client[os.getenv("MONGO_NAME")]

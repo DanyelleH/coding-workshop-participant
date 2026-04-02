@@ -1,8 +1,13 @@
 import json
-from ..database import get_db
+from database import get_db
+db = None
 
-db = get_db()
-
+def get_database():
+    global db
+    if db is None:
+        print("Connecting to DB...")
+        db = get_db()
+    return db
 # ---------------- RESPONSE ----------------
 def response(status, body):
     return {
@@ -16,12 +21,16 @@ def response(status, body):
 
 # ---------------- GET ----------------
 def get_individuals():
+    db = get_database()
+
     individuals = list(db.individuals.find())
     for ind in individuals:
         ind["_id"] = str(ind["_id"])
     return response(200, individuals)
 
 def get_individual_by_id(individual_id):
+    db = get_database()
+
     individual = db.individuals.find_one({"_id": individual_id})
 
     if not individual:
@@ -32,6 +41,7 @@ def get_individual_by_id(individual_id):
 
 # ---------------- CREATE ----------------
 def create_individual(event):
+    db = get_database()
     data = json.loads(event.get("body") or "{}")
 
     if not data.get("name") or not data.get("email"):
@@ -46,6 +56,7 @@ def create_individual(event):
 
 # ---------------- UPDATE ----------------
 def update_individual(event, individual_id):
+    db = get_database()
     data = json.loads(event.get("body") or "{}")
 
     result = db.individuals.update_one(
@@ -60,6 +71,7 @@ def update_individual(event, individual_id):
 
 # ---------------- DELETE ----------------
 def delete_individual(individual_id):
+    db = get_database()
     result = db.individuals.delete_one({"_id": individual_id})
 
     if result.deleted_count == 0:
@@ -75,28 +87,42 @@ def handler(event=None, context=None):
         individual_id = path.get("id")
 
         if method == "GET" and individual_id:
-            return get_individual_by_id(individual_id)
+            result = get_individual_by_id(individual_id)
 
         elif method == "GET":
-            return get_individuals()
+            result = get_individuals()
 
         elif method == "POST":
-            return create_individual(event)
+            result = create_individual(event)
 
         elif method == "PUT" and individual_id:
-            return update_individual(event, individual_id)
+            result = update_individual(event, individual_id)
 
         elif method == "DELETE" and individual_id:
-            return delete_individual(individual_id)
+            result = delete_individual(individual_id)
 
-        return response(400, {
-            "error": "Invalid request",
-            "method": method,
-            "id": individual_id
-        })
+        else:
+            result = response(400, {"message": "Invalid request"})
+
+        # 🔥 ENSURE FORMAT MATCHES EXACTLY
+        return {
+            "statusCode": result["statusCode"],
+            "headers": result["headers"],
+            "body": result["body"]
+        }
 
     except Exception as e:
         print("ERROR:", str(e))
-        return response(500, str(e))
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": str(e)})
+        }
+
+# def handler(event=None, context=None):
+#     return {
+#         "statusCode": 200,
+#         "body": "Lambda is working"
+    # }
 if __name__ == "__main__":
     print(handler())
