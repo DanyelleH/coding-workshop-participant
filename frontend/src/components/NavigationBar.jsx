@@ -103,9 +103,6 @@ export default function NavigationBar({ userRole = "user" }) {
                 My Profile
               </MenuItem>
 
-              <MenuItem onClick={() => handleNavigate("/settings")}>
-                Settings
-              </MenuItem>
 
               <MenuItem
                 onClick={handleLogout}
