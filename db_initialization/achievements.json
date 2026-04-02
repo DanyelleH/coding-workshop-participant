@@ -34,5 +34,85 @@
     "dateAwarded": "2024-06-01T00:00:00Z",
     "points": 150,
     "category": "Execution"
+  },
+  {
+    "_id": "ACH05",
+    "name": "Operational Excellence",
+    "description": "Streamlined internal workflows, reducing processing time by 25%.",
+    "teamId": "TEAM101",
+    "dateAwarded": "2024-07-15T00:00:00Z",
+    "category": "Execution"
+  },
+  {
+    "_id": "ACH06",
+    "name": "Innovation Breakthrough",
+    "description": "Introduced a new AI-driven fraud detection feature.",
+    "teamId": "TEAM102",
+    "dateAwarded": "2024-08-10T00:00:00Z",
+    "category": "Innovation"
+  },
+  {
+    "_id": "ACH07",
+    "name": "Client Satisfaction Award",
+    "description": "Achieved highest customer satisfaction score in the quarter.",
+    "teamId": "TEAM103",
+    "dateAwarded": "2024-09-05T00:00:00Z",
+    "category": "Customer Success"
+  },
+  {
+    "_id": "ACH08",
+    "name": "Team Collaboration Award",
+    "description": "Demonstrated exceptional cross-team collaboration on major project.",
+    "teamId": "TEAM101",
+    "dateAwarded": "2024-10-12T00:00:00Z",
+    "category": "Collaboration"
+  },
+  {
+    "_id": "ACH09",
+    "name": "Security Enhancement Recognition",
+    "description": "Successfully implemented new security protocols with zero incidents.",
+    "teamId": "TEAM102",
+    "dateAwarded": "2024-11-20T00:00:00Z",
+    "category": "Security"
+  },
+  {
+    "_id": "ACH10",
+    "name": "Data Excellence Award",
+    "description": "Improved data accuracy and reporting reliability across systems.",
+    "teamId": "TEAM103",
+    "dateAwarded": "2025-01-18T00:00:00Z",
+    "category": "Data"
+  },
+  {
+    "_id": "ACH11",
+    "name": "Scalability Achievement",
+    "description": "Scaled platform to support 2x user growth without performance loss.",
+    "teamId": "TEAM101",
+    "dateAwarded": "2025-02-25T00:00:00Z",
+    "category": "Performance"
+  },
+  {
+    "_id": "ACH12",
+    "name": "Innovation Sprint Winner",
+    "description": "Won internal hackathon with creative product solution.",
+    "teamId": "TEAM102",
+    "dateAwarded": "2025-03-14T00:00:00Z",
+    "category": "Innovation"
+  },
+  {
+    "_id": "ACH13",
+    "name": "Customer Retention Milestone",
+    "description": "Improved retention rate by 15% through product enhancements.",
+    "teamId": "TEAM103",
+    "dateAwarded": "2025-04-09T00:00:00Z",
+    "category": "Customer Success"
+  },
+  {
+    "_id": "ACH14",
+    "name": "Delivery Consistency Award",
+    "description": "Maintained 100% on-time delivery across all sprints for 6 months.",
+    "teamId": "TEAM101",
+    "dateAwarded": "2025-05-22T00:00:00Z",
+    "category": "Execution"
   }
 ]

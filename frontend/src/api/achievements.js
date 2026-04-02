@@ -7,8 +7,12 @@ export const getAllAchievements = () => request(ENDPOINT);
 export const getAchievementById = (id) =>
   request(`${ENDPOINT}/${id}`);
 
-export const getAchievementsByTeam = (teamId) =>
-  request(`${ENDPOINT}/team/${teamId}`);
+// ✅ FIXED: filter AFTER fetch
+export const getAchievementsByTeam = async (teamId) => {
+  const data = await request(ENDPOINT);
+
+  return data.filter((a) => a.teamId === teamId);
+};
 
 export const createAchievement = (data) =>
   request(ENDPOINT, {

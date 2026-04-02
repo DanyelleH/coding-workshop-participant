@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -8,90 +7,147 @@ import {
   List,
   ListItem,
   Button,
-  TextField
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel
 } from "@mui/material";
+
 import GroupIcon from "@mui/icons-material/Group";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import StarIcon from "@mui/icons-material/Star";
 
-// Mock data
-const initialTeams = {
-  TEAM101: {
-    name: "Alpha Team",
-    leader: "Emma Wilson",
-    members: ["Alice Johnson", "Brian Smith", "Carla Gomez", "David Lee", "Frank Chen"],
-    achievements: ["Top Performing Team", "Delivery Excellence"]
-  },
-  TEAM102: {
-    name: "Beta Team",
-    leader: "Liam Martinez",
-    members: ["Alice Johnson", "Carla Gomez", "Sofia Ramirez", "Noah Kim", "Olivia Turner"],
-    achievements: ["Innovation Excellence"]
-  },
-  TEAM103: {
-    name: "Gamma Team",
-    leader: "Ethan Wong",
-    members: ["Carla Gomez", "Isabella Perez", "Lucas Brown", "Mia Fischer", "Jakob Svensson"],
-    achievements: ["Customer Impact Award"]
-  }
-};
+import { useLocation } from "react-router-dom";
+import { getAllIndividuals } from "../api/individuals";
+import { updateTeam } from "../api/teams";
+import { getAchievementsByTeam } from "../api/achievements";
 
 export function Team() {
-  const { teamId } = useParams();
-  const [teams, setTeams] = useState(initialTeams);
+  const location = useLocation();
+  const team = location.state;
 
-  const [newMember, setNewMember] = useState("");
-  const [newLeader, setNewLeader] = useState("");
-  const [newAchievement, setNewAchievement] = useState("");
+  const [achievements, setAchievements] = useState([]);
+  const [individuals, setIndividuals] = useState([]);
+  const [localMembers, setLocalMembers] = useState(team?.members || []);
+  const [selectedMember, setSelectedMember] = useState("");
+  const [selectedLeader, setSelectedLeader] = useState("");
 
-  const team = teams[teamId];
-
-  if (!team) return <Typography>Team not found</Typography>;
-
-  const addMember = () => {
-    if (!newMember) return;
-    setTeams({
-      ...teams,
-      [teamId]: {
-        ...team,
-        members: [...team.members, newMember]
+  // 🔹 Fetch individuals
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await getAllIndividuals();
+        setIndividuals(data);
+      } catch (err) {
+        console.error("Failed to fetch individuals", err);
       }
-    });
-    setNewMember("");
+    };
+    fetchUsers();
+  }, []);
+
+  // 🔹 Fetch achievements
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      try {
+        const data = await getAchievementsByTeam(team._id);
+        setAchievements(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    if (team?._id) fetchAchievements();
+  }, [team?._id]);
+
+  if (!team) {
+    return <Typography>Team not found (refresh issue)</Typography>;
+  }
+
+  // 🔥 Helper: name + region
+  const getNameWithRegion = (id) => {
+    const user = individuals.find((u) => u._id === id);
+    if (!user) return id;
+    return `${user.name} (${user.region || "N/A"})`;
   };
 
-  const removeMember = (member) => {
-    setTeams({
-      ...teams,
-      [teamId]: {
-        ...team,
-        members: team.members.filter((m) => m !== member)
-      }
-    });
+  // 🔹 Leader options
+  const leaderOptions = individuals.filter(
+    (user) =>
+      !user.isLeader &&
+      (!user.teamIds || user.teamIds.length === 0)
+  );
+
+  // 🔹 Member options
+  const memberOptions = individuals.filter(
+    (user) =>
+      !user.isLeader &&
+      !localMembers.includes(user._id) &&
+      user._id !== team.leaderId
+  );
+
+  // 🔹 Update leader
+  const handleUpdateLeader = async () => {
+    if (!selectedLeader) return;
+
+    try {
+      await updateTeam(team._id, {
+        leaderId: selectedLeader
+      });
+
+      const updatedMembers = localMembers.filter(
+        (m) => m !== selectedLeader
+      );
+
+      setLocalMembers(updatedMembers);
+      team.leaderId = selectedLeader;
+
+      setSelectedLeader("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update leader");
+    }
   };
 
-  const updateLeader = () => {
-    if (!newLeader) return;
-    setTeams({
-      ...teams,
-      [teamId]: {
-        ...team,
-        leader: newLeader
-      }
-    });
-    setNewLeader("");
+  // 🔹 Add member
+  const handleAddMember = async () => {
+    if (!selectedMember) return;
+
+    const updatedMembers = [...localMembers, selectedMember];
+
+    if (updatedMembers.length > 5) {
+      alert("Max 5 members allowed");
+      return;
+    }
+
+    try {
+      await updateTeam(team._id, {
+        members: updatedMembers
+      });
+
+      setLocalMembers(updatedMembers);
+      setSelectedMember("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add member");
+    }
   };
 
-  const addAchievement = () => {
-    if (!newAchievement) return;
-    setTeams({
-      ...teams,
-      [teamId]: {
-        ...team,
-        achievements: [...team.achievements, newAchievement]
-      }
-    });
-    setNewAchievement("");
+  // 🔹 Remove member
+  const handleRemoveMember = async (memberId) => {
+    try {
+      const updatedMembers = localMembers.filter(
+        (m) => m !== memberId
+      );
+
+      await updateTeam(team._id, {
+        members: updatedMembers
+      });
+
+      setLocalMembers(updatedMembers);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to remove member");
+    }
   };
 
   const cardStyle = {
@@ -99,106 +155,162 @@ export function Team() {
     borderRadius: 4,
     boxShadow: 4,
     transition: "all 0.3s ease",
-    '&:hover': {
+    "&:hover": {
       boxShadow: 8,
       transform: "translateY(-2px)"
     }
   };
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ maxWidth: 900, mx: "auto", p: 4 }}>
+
+      {/* 🔹 Title */}
       <Typography variant="h4" gutterBottom>
         {team.name}
       </Typography>
 
-      {/* Leader */}
+      {/* 🔹 Leader */}
       <Card sx={cardStyle}>
         <CardContent>
+
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <StarIcon color="primary" />
             <Typography variant="h6">Team Leader</Typography>
           </Box>
 
-          <Typography sx={{ mt: 1 }}>{team.leader}</Typography>
+          <Typography sx={{ mt: 1 }}>
+            {getNameWithRegion(team.leaderId)}
+          </Typography>
 
-          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-            <TextField
-              label="New Leader"
-              value={newLeader}
-              onChange={(e) => setNewLeader(e.target.value)}
-              size="small"
-            />
-            <Button variant="contained" onClick={updateLeader}>
-              Reassign
-            </Button>
-          </Box>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Change Leader</InputLabel>
+            <Select
+              value={selectedLeader}
+              label="Change Leader"
+              onChange={(e) => setSelectedLeader(e.target.value)}
+            >
+              {leaderOptions.map((user) => (
+                <MenuItem key={user._id} value={user._id}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                    <Typography>{user.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {user.region || "N/A"}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Button
+            sx={{ mt: 2 }}
+            variant="contained"
+            onClick={handleUpdateLeader}
+          >
+            Reassign Leader
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Members */}
+      {/* 🔹 Members */}
       <Card sx={cardStyle}>
         <CardContent>
+
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <GroupIcon color="primary" />
             <Typography variant="h6">Members</Typography>
           </Box>
 
           <List>
-            {team.members.map((member, index) => (
+            {localMembers.map((memberId) => (
               <ListItem
-                key={index}
+                key={memberId}
                 secondaryAction={
-                  <Button color="error" onClick={() => removeMember(member)}>
+                  <Button
+                    color="error"
+                    onClick={() => handleRemoveMember(memberId)}
+                  >
                     Remove
                   </Button>
                 }
               >
-                {member}
+                {getNameWithRegion(memberId)}
               </ListItem>
             ))}
           </List>
 
-          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-            <TextField
+          {localMembers.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              No members assigned
+            </Typography>
+          )}
+
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Add Member</InputLabel>
+            <Select
+              value={selectedMember}
               label="Add Member"
-              value={newMember}
-              onChange={(e) => setNewMember(e.target.value)}
-              size="small"
-            />
-            <Button variant="contained" onClick={addMember}>
-              Add
-            </Button>
-          </Box>
+              onChange={(e) => setSelectedMember(e.target.value)}
+            >
+              {memberOptions.map((user) => (
+                <MenuItem key={user._id} value={user._id}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                    <Typography>{user.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {user.region || "N/A"}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Button
+            sx={{ mt: 2 }}
+            variant="contained"
+            onClick={handleAddMember}
+          >
+            Add Member
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Achievements */}
+      {/* 🔹 Achievements */}
       <Card sx={cardStyle}>
         <CardContent>
+
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <EmojiEventsIcon color="primary" />
             <Typography variant="h6">Achievements</Typography>
           </Box>
 
           <List>
-            {team.achievements.map((ach, index) => (
-              <ListItem key={index}>{ach}</ListItem>
+            {achievements.map((ach) => (
+              <ListItem key={ach._id}>
+                <Box>
+                  <Typography fontWeight={600}>
+                    {ach.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {ach.description}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(ach.dateAwarded).toLocaleDateString()}
+                  </Typography>
+                </Box>
+              </ListItem>
             ))}
           </List>
 
-          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-            <TextField
-              label="New Achievement"
-              value={newAchievement}
-              onChange={(e) => setNewAchievement(e.target.value)}
-              size="small"
-            />
-            <Button variant="contained" onClick={addAchievement}>
-              Reward
-            </Button>
-          </Box>
+          {achievements.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              No achievements yet
+            </Typography>
+          )}
+
         </CardContent>
       </Card>
+
     </Box>
   );
 }
